@@ -12,19 +12,24 @@ export const Login = () => {
 
     const toHome = () => {
         setLoading(true);
-        axios.get(
-            `http://8080-ffbaeebdacbaeabecfcdcbcbcbccaa.premiumproject.examly.io/user/get/email/${encodeURIComponent(email)}/${encodeURIComponent(password)}`
+        axios.post(
+            'http://localhost:8080/user/login',
+            {
+                username: email,
+                password: password
+            }
         )
         .then((response) => {
-            if (response.data) {
+            if (response.data.success) {
                 // ✅ Save user data to localStorage
                 localStorage.setItem("userId", response.data.id);
-                localStorage.setItem("userEmail", response.data.email);
+                localStorage.setItem("userEmail", response.data.username);
+                localStorage.setItem("userRole", response.data.role);
 
                 // ✅ Navigate to documents page
                 navigate('/documents');
             } else {
-                alert("Invalid credentials");
+                alert(response.data.message || "Invalid credentials");
             }
         })
         .catch((err) => {

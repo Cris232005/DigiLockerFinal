@@ -5,7 +5,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.util.*;  
 
@@ -15,7 +17,7 @@ import com.examly.springapp.service.UserService;
 
 @RestController
 @RequestMapping("/user")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8081"})
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8081"}, allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
 public class UserController {
     
     @Autowired
@@ -26,14 +28,15 @@ public class UserController {
 
     // ✅ Register new user
     @PostMapping("/add")
-    public User addUser(@RequestBody User user) {
-        if (user.getRole() == null || user.getRole().isEmpty()) {
-            user.setRole("USER");
+    public ResponseEntity<User> addUser(@RequestBody User user) {
+        if (user.getRole() == null) {
+            user.setRole(User.Role.USER);
         }
-        if (user.getStorage_used() <= 0) {
-            user.setStorage_used(0);
+        if (user.getStorageUsed() == null || user.getStorageUsed() <= 0) {
+            user.setStorageUsed(0L);
         }
-        return userService.addUser(user);
+        User savedUser = userService.addUser(user);
+        return ResponseEntity.ok(savedUser);
     }
 
     // ✅ Get all users with pagination and sorting
@@ -48,48 +51,59 @@ public class UserController {
         Pageable pageable = PageRequest.of(page, size, sort);
         return userRepository.findAll(pageable);
     }
-
-    // ✅ Login
+ 
+    // ✅ Login with username/email and password
     @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody User loginRequest) {
-        User u = userRepository.findByEmail(loginRequest.getEmail());
+    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> loginRequest) {
+        String identifier = loginRequest.get("username"); // can be username or email
+        String password = loginRequest.get("password");
+        
+        User u = userRepository.findByUsername(identifier);
+        if (u == null) {
+            u = userRepository.findByEmail(identifier);
+        }
+        
         Map<String, Object> response = new HashMap<>();
-
-        if (u != null && u.getPassword().equals(loginRequest.getPassword())) {
+        if (u != null && userService.checkPassword(password, u.getPasswordHash())) {
             response.put("success", true);
             response.put("id", u.getId());
+            response.put("username", u.getUsername());
             response.put("role", u.getRole());
+            response.put("storageUsed", u.getStorageUsed());
             response.put("message", "Login successful");
         } else {
             response.put("success", false);
-            response.put("message", "Invalid email or password");
+            response.put("message", "Invalid credentials");
         }
-        return response;
+        return ResponseEntity.ok(response);
     }
 
     // ✅ Delete user by ID
     @DeleteMapping("/del/{id}")
-    public String deleteUser(@PathVariable int id) {
-        return userService.deleteUser(id);
+    public ResponseEntity<String> deleteUser(@PathVariable Long id) {
+        String result = userService.deleteUser(id);
+        return ResponseEntity.ok(result);
     }
 
     // ✅ Check login using GET (for testing)
     @GetMapping("/get/email/{email}/{password}")
-    public boolean getByUserEmailPassword(@PathVariable String email, @PathVariable String password) {
+    public ResponseEntity<Boolean> getByUserEmailPassword(@PathVariable String email, @PathVariable String password) {
         User u = userRepository.findByEmail(email);
-        return (u != null && u.getPassword().equals(password));
+        boolean isValid = (u != null && u.getPasswordHash().equals(password));
+        return ResponseEntity.ok(isValid);
     }
 
     // ✅ Get user ID by email
     @GetMapping("/get/id/{email}")
-    public int getByUserEmail(@PathVariable String email) {
+    public ResponseEntity<Long> getByUserEmail(@PathVariable String email) {
         User u = userRepository.findByEmail(email);
-        return (u != null) ? u.getId() : -1;
+        Long userId = (u != null) ? u.getId() : -1L;
+        return ResponseEntity.ok(userId);
     }
 
     // ✅ Update user details
     @PutMapping("/update/{id}")
-    public User updateUser(@PathVariable int id, @RequestBody User updatedUser) {
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User updatedUser) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User with id " + id + " not found"));
 
@@ -99,16 +113,35 @@ public class UserController {
         if (updatedUser.getEmail() != null) {
             user.setEmail(updatedUser.getEmail());
         }
-        if (updatedUser.getPassword() != null) {
-            user.setPassword(updatedUser.getPassword());
+        if (updatedUser.getPasswordHash() != null) {
+            user.setPasswordHash(updatedUser.getPasswordHash());
         }
         if (updatedUser.getRole() != null) {
             user.setRole(updatedUser.getRole());
         }
-        if (updatedUser.getStorage_used() >= 0) {
-            user.setStorage_used(updatedUser.getStorage_used());
+        if (updatedUser.getStorageUsed() != null && updatedUser.getStorageUsed() >= 0) {
+            user.setStorageUsed(updatedUser.getStorageUsed());
         }
 
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        return ResponseEntity.ok(savedUser);
+    }
+    
+    // ✅ Search users by name, username, or email
+    @GetMapping("/search")
+    public ResponseEntity<List<User>> searchUsers(@RequestParam String query) {
+        List<User> users = userRepository.findByNameContainingIgnoreCaseOrUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(query, query, query);
+        return ResponseEntity.ok(users);
+    }
+    
+    // ✅ Create admin user (temporary endpoint)
+    @PostMapping("/create-admin")
+    public ResponseEntity<User> createAdmin(@RequestBody User user) {
+        user.setRole(User.Role.ADMIN);
+        if (user.getStorageUsed() == null || user.getStorageUsed() <= 0) {
+            user.setStorageUsed(0L);
+        }
+        User savedUser = userService.addUser(user);
+        return ResponseEntity.ok(savedUser);
     }
 }

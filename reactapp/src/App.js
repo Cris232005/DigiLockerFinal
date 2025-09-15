@@ -1,21 +1,70 @@
-import React from 'react';
-import {BrowserRouter,Routes,Route} from 'react-router-dom';
-import { Login } from './components/Login';
-import { Home } from './components/Home';
-import  { DocumentList } from './components/DocumentList';
-import { SignUpPage } from './components/SignUpPage';
-import { FolderDocs } from './components/FolderDocs';
-const App=()=>{
-    return(
-        <BrowserRouter>
-            <Routes>
-                <Route path='/' element={<Home/>}></Route>
-                <Route path='/login' element={<Login/>}></Route>
-                <Route path='/sign' element={<SignUpPage/>}></Route>
-                <Route path='/documents' element={<DocumentList/>}></Route>
-                <Route path='/folderDocs/:id' element={<FolderDocs/>}></Route>
-            </Routes>
-        </BrowserRouter>
-    );
+import React, { useState } from 'react';
+import LoginRegister from './components/LoginRegister';
+import UserDashboard from './components/UserDashboard';
+import AdminDashboard from './components/AdminDashboard';
+import AuditLog from './components/AuditLog';
+import './styles/LoginRegister.css';
+import './styles/UserDashboard.css';
+import './styles/DocumentUpload.css';
+import './styles/DocumentDetails.css';
+import './styles/AdminDashboard.css';
+import './styles/AuditLog.css';
+
+function App() {
+  const [user, setUser] = useState(null);
+  const [currentView, setCurrentView] = useState('dashboard');
+
+  const handleLogin = (userData) => {
+    setUser(userData);
+    setCurrentView('dashboard');
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setCurrentView('dashboard');
+  };
+
+  const renderCurrentView = () => {
+    if (!user) {
+      return <LoginRegister onLogin={handleLogin} />;
+    }
+
+    switch (currentView) {
+      case 'dashboard':
+        return user.role === 'ADMIN' ? (
+          <AdminDashboard 
+            user={user} 
+            onLogout={handleLogout}
+            onViewAuditLog={() => setCurrentView('audit')}
+          />
+        ) : (
+          <UserDashboard 
+            user={user} 
+            onLogout={handleLogout}
+            onViewAuditLog={() => setCurrentView('audit')}
+          />
+        );
+      case 'audit':
+        return (
+          <AuditLog 
+            user={user} 
+            onBack={() => setCurrentView('dashboard')}
+          />
+        );
+      default:
+        return user.role === 'ADMIN' ? (
+          <AdminDashboard user={user} onLogout={handleLogout} />
+        ) : (
+          <UserDashboard user={user} onLogout={handleLogout} />
+        );
+    }
+  };
+
+  return (
+    <div className="App">
+      {renderCurrentView()}
+    </div>
+  );
 }
+
 export default App;

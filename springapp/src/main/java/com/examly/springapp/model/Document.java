@@ -1,72 +1,85 @@
 package com.examly.springapp.model;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import javax.persistence.*;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Entity
+@Table(name = "documents")
 public class Document {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Long id;
 
     private String name;
+    
+    @Column(name = "file_type")
     private String fileType;
-    private int size;
-    private int isArchived;
-    private String path;
-    private Instant uploadTime;
+    
+    @Column(name = "file_url")
+    private String fileUrl;
+    
+    private Long size;
+    
+    @Column(name = "is_archived")
+    private Boolean isArchived = false;
+    
+    @Column(name = "uploaded_at")
+    private LocalDateTime uploadedAt;
 
     // Relationships
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "owner_id")
     @JsonBackReference("user-doc")
-    private User user;
+    private User owner;
 
     @ManyToOne
-    @JoinColumn(name = "folder_id")
+    @JoinColumn(name = "parent_folder_id")
     @JsonBackReference("folder-doc")
-    private Folder folder;
+    private Folder parentFolder;
 
     // ✅ Constructors
-    public Document() {}
+    public Document() {
+        this.uploadedAt = LocalDateTime.now();
+        this.isArchived = false;
+    }
 
-    public Document(String name, String fileType, int size, int isArchived, String path) {
+    public Document(String name, String fileType, String fileUrl, Long size) {
         this.name = name;
         this.fileType = fileType;
+        this.fileUrl = fileUrl;
         this.size = size;
-        this.isArchived = isArchived;
-        this.path = path;
-        this.uploadTime = Instant.now(); // auto-set when created
+        this.uploadedAt = LocalDateTime.now();
+        this.isArchived = false;
     }
 
     // ✅ Getters & Setters
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
     public String getFileType() { return fileType; }
     public void setFileType(String fileType) { this.fileType = fileType; }
+    
+    public String getFileUrl() { return fileUrl; }
+    public void setFileUrl(String fileUrl) { this.fileUrl = fileUrl; }
 
-    public int getSize() { return size; }
-    public void setSize(int size) { this.size = size; }
+    public Long getSize() { return size; }
+    public void setSize(Long size) { this.size = size; }
 
-    public int getIsArchived() { return isArchived; }
-    public void setIsArchived(int isArchived) { this.isArchived = isArchived; }
+    public Boolean getIsArchived() { return isArchived; }
+    public void setIsArchived(Boolean isArchived) { this.isArchived = isArchived; }
 
-    public String getPath() { return path; }
-    public void setPath(String path) { this.path = path; }
+    public LocalDateTime getUploadedAt() { return uploadedAt; }
+    public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
 
-    public Instant getUploadTime() { return uploadTime; }
-    public void setUploadTime(Instant uploadTime) { this.uploadTime = uploadTime; }
+    public User getOwner() { return owner; }
+    public void setOwner(User owner) { this.owner = owner; }
 
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-
-    public Folder getFolder() { return folder; }
-    public void setFolder(Folder folder) { this.folder = folder; }
+    public Folder getParentFolder() { return parentFolder; }
+    public void setParentFolder(Folder parentFolder) { this.parentFolder = parentFolder; }
 }

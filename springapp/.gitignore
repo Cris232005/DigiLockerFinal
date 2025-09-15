@@ -31,3 +31,14 @@ build/
 
 ### VS Code ###
 .vscode/
+### React / Node.js ###
+node_modules/
+build/
+dist/
+.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.pnpm-debug.log*
+

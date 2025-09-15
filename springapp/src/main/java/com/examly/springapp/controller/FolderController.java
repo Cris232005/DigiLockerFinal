@@ -1,14 +1,9 @@
 package com.examly.springapp.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMethod;
 import java.util.*;
 
 import com.examly.springapp.model.Document;
@@ -20,68 +15,90 @@ import com.examly.springapp.repository.UserRepository;
 
 @RestController
 @RequestMapping("/folder")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8081"}, allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
 public class FolderController {
     @Autowired
-    private FolderRepository folRepo;
+    private FolderRepository folderRepository;
 
     @Autowired
-    private DocumentRepository docRepo;
+    private DocumentRepository documentRepository;
 
     @Autowired
-    private UserRepository useRepo;
+    private UserRepository userRepository;
 
 
     @PostMapping("/add/{id}")
-    public Folder addFolder(@PathVariable int id,@RequestBody Folder fold){
-        User use = useRepo.findById(id).orElseThrow(()-> new RuntimeException("User not found"));
-        fold.setUser(use);
-        return folRepo.save(fold);
+    public ResponseEntity<Folder> addFolder(@PathVariable Long id, @RequestBody Folder folder){
+        User user = userRepository.findById(id).orElseThrow(()-> new RuntimeException("User not found"));
+        folder.setOwner(user);
+        Folder savedFolder = folderRepository.save(folder);
+        return ResponseEntity.ok(savedFolder);
     }
 
     @GetMapping("/get/{id}")
-    public List<Folder> getByUserId(@PathVariable int id){
-        User ds = useRepo.findById(id)
-        .orElseThrow(() -> new RuntimeException("cant find id "+id));
+    public ResponseEntity<List<Folder>> getByUserId(@PathVariable Long id){
+        User user = userRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("User not found: "+id));
 
-        return ds.getFolders();
+        return ResponseEntity.ok(user.getFolders());
     }
 
     @GetMapping("/get/doc/{fid}")
-    public List<Document> getByFolderId(@PathVariable int fid){
-        Folder ds = folRepo.findById(fid)
-        .orElseThrow(() -> new RuntimeException("cant find id "+fid));
+    public ResponseEntity<List<Document>> getByFolderId(@PathVariable Long fid){
+        Folder folder = folderRepository.findById(fid)
+        .orElseThrow(() -> new RuntimeException("Folder not found: "+fid));
 
-        return ds.getDocs();
+        return ResponseEntity.ok(folder.getDocuments());
     }
     
     @DeleteMapping("/del/{id}")
-    public String deleteById(@PathVariable int id){
-        folRepo.deleteById(id);
-        return "Deleted the particular folder";
+    public ResponseEntity<String> deleteById(@PathVariable Long id){
+        if (!folderRepository.existsById(id)) {
+            return ResponseEntity.badRequest().body("Folder not found");
+        }
+        folderRepository.deleteById(id);
+        return ResponseEntity.ok("Folder deleted successfully");
     }
     
     @GetMapping("/get")
-    public List<Folder> getFolders(){
-        return folRepo.findAll();
+    public ResponseEntity<List<Folder>> getFolders(){
+        return ResponseEntity.ok(folderRepository.findAll());
     }
 
-    @PutMapping("/movedoc/{id}/{did}")
-    public Document moveDocument(@PathVariable int id,@PathVariable int did){
-        Document doc = docRepo.findById(did).orElseThrow(()-> new RuntimeException("doc not find"));
-        doc.setUser(null);
-        Folder fold= folRepo.findById(id).orElseThrow(()-> new RuntimeException("doc not find"));
-        doc.setFolder(fold);
-        fold.getDocs().add(doc);
-        return docRepo.save(doc);
+    @PutMapping("/movedoc/{folderId}/{docId}")
+    public ResponseEntity<Document> moveDocument(@PathVariable Long folderId, @PathVariable Long docId){
+        Document document = documentRepository.findById(docId)
+                .orElseThrow(()-> new RuntimeException("Document not found"));
+        Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(()-> new RuntimeException("Folder not found"));
+        
+        document.setParentFolder(folder);
+        Document savedDoc = documentRepository.save(document);
+        return ResponseEntity.ok(savedDoc);
     }
-    @PutMapping("/removedoc/{id}/{did}")
-    public Document removeDocument(@PathVariable int id,@PathVariable int did){
-        User use = useRepo.findById(id).orElseThrow(()-> new RuntimeException("user not find "+id));
-        Document doc = docRepo.findById(did).orElseThrow(()-> new RuntimeException("doc not find "+did));
-        doc.setUser(use);
-        doc.setFolder(null);
-        return docRepo.save(doc);
+    
+    @PutMapping("/removedoc/{userId}/{docId}")
+    public ResponseEntity<Document> removeDocument(@PathVariable Long userId, @PathVariable Long docId){
+        User user = userRepository.findById(userId)
+                .orElseThrow(()-> new RuntimeException("User not found: "+userId));
+        Document document = documentRepository.findById(docId)
+                .orElseThrow(()-> new RuntimeException("Document not found: "+docId));
+        
+        document.setOwner(user);
+        document.setParentFolder(null);
+        Document savedDoc = documentRepository.save(document);
+        return ResponseEntity.ok(savedDoc);
     }
 
-
+    // Create subfolder
+    @PostMapping("/subfolder/{parentId}")
+    public ResponseEntity<Folder> createSubfolder(@PathVariable Long parentId, @RequestBody Folder subfolder) {
+        Folder parentFolder = folderRepository.findById(parentId)
+                .orElseThrow(() -> new RuntimeException("Parent folder not found"));
+        
+        subfolder.setParentFolder(parentFolder);
+        subfolder.setOwner(parentFolder.getOwner());
+        Folder savedFolder = folderRepository.save(subfolder);
+        return ResponseEntity.ok(savedFolder);
+    }
 }

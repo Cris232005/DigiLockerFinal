@@ -61,7 +61,7 @@ function App() {
   };
 
   return (
-    <div className="App">
+    <div className="App" style={{ fontSize: '18px' }}>
       {renderCurrentView()}
     </div>
   );

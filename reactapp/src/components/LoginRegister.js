@@ -16,10 +16,14 @@ const LoginRegister = ({ onLogin }) => {
       if (response.data.success) {
         onLogin(response.data);
       } else {
-        alert(response.data.message);
+        alert(response.data.message || 'Invalid credentials');
       }
     } catch (error) {
-      alert('Login failed');
+      if (!error.response) {
+        alert('Cannot connect to server. Make sure you are on the same WiFi as the host PC.');
+      } else {
+        alert('Login failed: ' + (error.response?.data?.message || error.response.status));
+      }
     }
   };
 

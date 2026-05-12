@@ -6,9 +6,9 @@ import { useNavigate } from 'react-router-dom';
 
 export const SignUpPage = () => {
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("USER");
-  const [storage_used, setStorage] = useState(0);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -19,14 +19,15 @@ export const SignUpPage = () => {
 
     const user = {
       name,
+      username,
       email,
       role,
-      storage_used,
-      password
+      storageUsed: 0,
+      passwordHash: password
     };
 
     // ✅ Use HTTP for local/Examly dev backend
-    axios.post("http://localhost:8080/user/add", user, {
+    axios.post("http://10.201.132.2:8080/user/add", user, {
       headers: { "Content-Type": "application/json" }
     })
       .then((response) => {
@@ -36,7 +37,11 @@ export const SignUpPage = () => {
       })
       .catch((err) => {
         console.error("Error Creating User:", err);
-        alert("Error Creating User! Check backend or CORS settings.");
+        if (!err.response) {
+          alert("Registration failed: Cannot connect to server. Make sure the Spring Boot backend is running on port 8080.");
+        } else {
+          alert("Registration failed: " + (err.response.data?.message || err.response.status));
+        }
       })
       .finally(() => {
         setLoading(false);
@@ -66,6 +71,7 @@ export const SignUpPage = () => {
                 <input
                   id="name"
                   className="form-input"
+                  value={name}
                   onChange={(e) => setName(e.target.value)}
                   type="text"
                   placeholder="Enter your full name"
@@ -78,6 +84,7 @@ export const SignUpPage = () => {
                 <input
                   id="email"
                   className="form-input"
+                  value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   type="email"
                   placeholder="Enter your email"
@@ -86,26 +93,14 @@ export const SignUpPage = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label" htmlFor="role">Role</label>
+                <label className="form-label" htmlFor="username">Username</label>
                 <input
-                  id="role"
+                  id="username"
                   className="form-input"
-                  onChange={(e) => setRole(e.target.value)}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   type="text"
-                  placeholder="Enter your role (e.g., User, Admin)"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="storage">Storage Limit (GB)</label>
-                <input
-                  id="storage"
-                  className="form-input"
-                  onChange={(e) => setStorage(Number(e.target.value))}
-                  type="number"
-                  placeholder="Enter storage limit"
-                  min="0"
+                  placeholder="Choose a username"
                   required
                 />
               </div>
@@ -115,6 +110,7 @@ export const SignUpPage = () => {
                 <input
                   id="password"
                   className="form-input"
+                  value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   type="password"
                   placeholder="Create a secure password"

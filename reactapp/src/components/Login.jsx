@@ -13,7 +13,7 @@ export const Login = () => {
     const toHome = () => {
         setLoading(true);
         axios.post(
-            'http://localhost:8080/user/login',
+            'http://10.201.132.2:8080/user/login',
             {
                 username: email,
                 password: password
@@ -33,8 +33,12 @@ export const Login = () => {
             }
         })
         .catch((err) => {
-            console.log(err.message);
-            alert("Login failed. Please try again.");
+            console.log(err);
+            if (!err.response) {
+                alert("Login failed: Cannot connect to server. Make sure the backend is running on port 8080.");
+            } else {
+                alert("Login failed: " + (err.response.data?.message || err.response.status));
+            }
         })
         .finally(() => {
             setLoading(false);
@@ -73,9 +77,9 @@ export const Login = () => {
                                     id="email"
                                     className="form-input" 
                                     onChange={handleEmail} 
-                                    type='email'
+                                    type='text'
                                     value={email} 
-                                    placeholder="Enter your email"
+                                    placeholder="Enter your email or username"
                                     required
                                 />
                             </div>
